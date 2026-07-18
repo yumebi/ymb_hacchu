@@ -1,7 +1,7 @@
 {
   "name": "ymb-hacchu-kun",
   "productName": "YMB 発注くん",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "発注書作成ローカルアプリ",
   "author": "ymb",
