@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;">
+<title>YMB 発注くん</title>
+<style>
+  :root{
+    --border:#333;
+    --bg:#f4f4f6;
+    --panel:#fff;
+    --accent:#2b5797;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family:"Yu Gothic","Meiryo",sans-serif;
+    background:var(--bg);
+    margin:0;
+    padding:20px;
+    color:#222;
+  }
+  h1{font-size:18px;margin:0 0 12px;}
+  .layout{display:flex;gap:20px;align-items:flex-start;}
+  .panel{
+    background:var(--panel);
+    border:1px solid #ccc;
+    border-radius:6px;
+    padding:14px 16px;
+    margin-bottom:16px;
+  }
+  .controls{width:360px;flex:none;max-height:calc(100vh - 60px);overflow-y:auto;}
+  .sheet-wrap{flex:1;min-width:0;}
+  fieldset{border:1px solid #ccc;border-radius:6px;margin-bottom:14px;padding:10px 12px;}
+  legend{font-weight:bold;font-size:13px;padding:0 6px;color:var(--accent);}
+  label{display:block;font-size:12px;margin:6px 0 2px;color:#444;}
+  input[type=text],input[type=date],input[type=number],select,textarea{
+    width:100%;padding:5px 6px;font-size:13px;border:1px solid #bbb;border-radius:4px;
+  }
+  textarea{resize:vertical;min-height:44px;}
+  button{
+    cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:#fff;
+    padding:6px 12px;border-radius:4px;font-size:12px;margin-top:8px;
+  }
+  button.secondary{background:#fff;color:var(--accent);}
+  button.small{padding:3px 8px;font-size:11px;margin:0;}
+  button.danger{background:#fff;color:#c0392b;border-color:#c0392b;}
+  button.primary-action{background:#c0392b;border-color:#c0392b;width:100%;}
+  .btn-row{display:flex;gap:6px;flex-wrap:wrap;}
+  .hist-list{max-height:260px;overflow-y:auto;border:1px solid #eee;}
+  .hist-item{
+    display:flex;justify-content:space-between;align-items:center;gap:6px;
+    padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;
+  }
+  .hist-item:last-child{border-bottom:none;}
+  .hist-item .info{flex:1;min-width:0;}
+  .hist-item .info .l1{font-weight:bold;}
+  .hist-item .info .l2{color:#666;}
+  .hist-item .amount{white-space:nowrap;font-weight:bold;}
+  .hist-empty{padding:10px;font-size:12px;color:#999;text-align:center;}
+
+  /* 発注書シート */
+  #sheet{
+    background:#fff;
+    width:794px;
+    min-height:1123px;
+    margin:0 auto;
+    padding:36px 40px;
+    border:1px solid #999;
+    font-size:13px;
+  }
+  .sheet-title{text-align:center;font-size:26px;letter-spacing:14px;font-weight:bold;position:relative;}
+  .sheet-no{position:absolute;right:0;top:8px;font-size:13px;letter-spacing:0;}
+  .sheet-no input{border:none;border-bottom:1px solid #333;width:120px;font-size:13px;text-align:left;padding:0 2px;}
+  .top-area{display:flex;justify-content:space-between;margin-top:16px;}
+  .addr-block{width:47%;font-size:13px;line-height:1.5;}
+  .addr-block .zip{margin-bottom:2px;}
+  .addr-block .name-line{
+    display:flex;align-items:baseline;gap:6px;margin-top:4px;
+    border-bottom:1px solid #333;padding-bottom:2px;
+  }
+  .date-line{text-align:right;font-size:13px;margin-bottom:6px;}
+  .date-line input[type=date]{display:inline-block;width:150px;font-size:12px;padding:2px 4px;}
+  .lead{margin:14px 0 10px;font-size:13px;}
+  .total-line{
+    text-align:center;font-size:20px;font-weight:bold;margin:14px 0 10px;
+  }
+  .total-line small{font-size:13px;font-weight:normal;}
+  table.items{
+    width:100%;border-collapse:collapse;margin-top:6px;
+  }
+  table.items th,table.items td{
+    border:1px solid #333;padding:4px 6px;font-size:12px;
+  }
+  table.items th{background:#eee;}
+  table.items td.name{text-align:left;}
+  table.items td.num,table.items th.num{text-align:right;}
+  table.items input,table.items textarea{
+    border:none;width:100%;font-size:12px;padding:1px 2px;text-align:right;
+  }
+  table.items td.name input,table.items td.name textarea{text-align:left;}
+  table.items tfoot td{font-weight:bold;background:#f7f7f7;}
+  table.items tfoot td.label{text-align:right;}
+  .row-del{background:none;border:none;color:#c0392b;font-size:14px;cursor:pointer;padding:0;margin:0;}
+  .remarks{margin-top:10px;}
+  .remarks textarea{border:1px solid #333;min-height:70px;width:100%;font-size:12px;padding:6px;}
+
+  .no-print{}
+  @media print{
+    body{background:#fff;padding:0;}
+    .no-print{display:none !important;}
+    .layout{display:block;}
+    #sheet{border:none;width:auto;min-height:0;padding:12mm 14mm;margin:0;}
+    .remarks .box{display:block !important;}
+    @page{size:A4;margin:0;}
+  }
+</style>
+</head>
+<body>
+
+<h1>YMB 発注くん <span id="appVersion" style="font-size:12px;color:#888;font-weight:normal;"></span></h1>
+
+<div id="updateBanner" class="no-print" style="display:none;background:#fff3cd;border:1px solid #ffe08a;color:#7a5c00;padding:8px 14px;border-radius:6px;margin-bottom:12px;font-size:13px;justify-content:space-between;align-items:center;">
+  <span id="updateBannerText"></span>
+  <button type="button" id="updateBannerBtn" class="small secondary" style="margin:0;">ダウンロードページを開く</button>
+</div>
+
+<div class="layout">
+
+  <div class="controls no-print">
+
+    <div class="panel">
+      <button type="button" id="newOrderBtn" class="secondary" style="width:100%;">新規発注書</button>
+      <button type="button" id="saveOrderBtn" style="width:100%;">履歴に保存</button>
+      <button type="button" id="printBtn" class="primary-action">保存してPDF出力</button>
+    </div>
+
+    <div class="panel">
+      <fieldset>
+        <legend>発注元(自社)</legend>
+        <label>登録済みから選択</label>
+        <select id="senderSelect"></select>
+        <div class="btn-row">
+          <button type="button" class="small secondary" id="senderNewBtn">新規</button>
+          <button type="button" class="small secondary" id="senderEditBtn">編集保存</button>
+          <button type="button" class="small danger" id="senderDelBtn">削除</button>
+        </div>
+        <label>郵便番号</label>
+        <input type="text" id="senderZip" placeholder="100-0001">
+        <label>住所</label>
+        <textarea id="senderAddr" placeholder="東京都千代田区千代田1-1&#10;サンプルビル 3F"></textarea>
+        <label>会社名</label>
+        <input type="text" id="senderName" placeholder="株式会社サンプル商事">
+      </fieldset>
+
+      <fieldset>
+        <legend>宛先(取引先)</legend>
+        <label>登録済みから選択</label>
+        <select id="clientSelect"></select>
+        <div class="btn-row">
+          <button type="button" class="small secondary" id="clientNewBtn">新規</button>
+          <button type="button" class="small secondary" id="clientEditBtn">編集保存</button>
+          <button type="button" class="small danger" id="clientDelBtn">削除</button>
+        </div>
+        <label>郵便番号</label>
+        <input type="text" id="clientZip" placeholder="000-0000">
+        <label>住所</label>
+        <textarea id="clientAddr" placeholder="東京都◯◯区◯◯1-2-3&#10;◯◯ビル 4F"></textarea>
+        <label>宛名(会社名・担当者名)</label>
+        <input type="text" id="clientName" placeholder="サンプル株式会社　山田太郎">
+        <label>敬称</label>
+        <select id="clientSuffix">
+          <option value="御中">御中</option>
+          <option value="様">様</option>
+          <option value="">なし</option>
+        </select>
+      </fieldset>
+    </div>
+
+    <div class="panel">
+      <button type="button" id="addRowBtn" style="width:100%;">明細行を追加</button>
+    </div>
+
+    <div class="panel">
+      <fieldset>
+        <legend>発注履歴</legend>
+        <div class="hist-list" id="historyList"></div>
+      </fieldset>
+    </div>
+
+  </div>
+
+  <div class="sheet-wrap">
+    <div id="sheet">
+      <div class="sheet-title">発　　注　　書
+        <span class="sheet-no">No. <input type="text" id="docNo"></span>
+      </div>
+
+      <div class="date-line">
+        <span id="wareki"></span>　<input type="date" id="docDate" class="no-print">
+      </div>
+
+      <div class="top-area">
+        <div class="addr-block">
+          <div class="zip" id="viewClientZip">〒</div>
+          <div id="viewClientAddr">&nbsp;</div>
+          <div class="name-line">
+            <span id="viewClientName">&nbsp;</span>
+            <span class="suffix" id="viewClientSuffix"></span>
+          </div>
+        </div>
+        <div class="addr-block">
+          <div class="zip" id="viewSenderZip">〒</div>
+          <div id="viewSenderAddr">&nbsp;</div>
+          <div style="margin-top:4px;font-weight:bold;" id="viewSenderName">&nbsp;</div>
+        </div>
+      </div>
+
+      <div class="lead">下記の通り御発注申し上げます。</div>
+
+      <div class="total-line">
+        合計金額　<span id="viewSubtotal">¥0-</span><small>（消費税別）</small>
+      </div>
+
+      <table class="items">
+        <thead>
+          <tr>
+            <th style="width:6%;" class="no-print"></th>
+            <th style="width:38%;">品　　名</th>
+            <th style="width:10%;">数　量</th>
+            <th style="width:8%;">単　位</th>
+            <th style="width:16%;">単　価</th>
+            <th style="width:22%;">金　　額</th>
+          </tr>
+        </thead>
+        <tbody id="itemsBody"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="5" class="label">小　　計　(10％対象)</td>
+            <td class="num" id="viewSub2">0</td>
+          </tr>
+          <tr>
+            <td colspan="5" class="label">消 費 税 等 (10％)</td>
+            <td class="num" id="viewTax">0</td>
+          </tr>
+          <tr>
+            <td colspan="5" class="label">合　　　計</td>
+            <td class="num" id="viewTotal">0</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <div class="remarks">
+        備考：
+        <textarea id="remarksInput" class="no-print"></textarea>
+        <div class="box" id="remarksView" style="display:none;border:1px solid #333;min-height:70px;padding:6px;font-size:12px;white-space:pre-wrap;"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+{
+  "name": "ymb-hacchu-kun",
+  "productName": "YMB 発注くん",
+  "version": "1.0.0",
+  "private": true,
+  "description": "発注書作成ローカルアプリ",
+  "author": "ymb",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "icon": "node scripts/generate-icon.js",
+    "dist": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^43.1.1",
+    "electron-builder": "^26.0.12",
+    "png-to-ico": "^3.0.2",
+    "sharp": "^0.35.3"
+  },
+  "build": {
+    "appId": "com.ymb.hacchukun",
+    "productName": "YMB 発注くん",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*"
+    ],
+    "icon": "build/icon.ico",
+    "win": {
+      "target": ["nsis", "portable"]
+    },
+    "nsis": {
+      "language": "1041",
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "YmbHacchuKun-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "YmbHacchuKun-Portable-${version}.${ext}"
+    },
+    "asar": true
+  }
+}
