@@ -11,7 +11,7 @@
   <rect x="82" y="144" width="60" height="10" rx="5" fill="#8fa3c4"/>
 
   <!-- 印(判子) -->
-  <circle cx="184" cy="192" r="52" fill="none" stroke="#d0392b" stroke-width="11"/>
-  <text x="184" y="207" font-family="'Yu Gothic','Meiryo',sans-serif" font-size="46" font-weight="bold"
-        fill="#d0392b" text-anchor="middle">印</text>
+  <circle cx="184" cy="192" r="54" fill="#d0392b"/>
+  <text x="184" y="209" font-family="'Yu Gothic','Meiryo',sans-serif" font-size="50" font-weight="bold"
+        fill="#ffffff" text-anchor="middle">印</text>
 </svg>
