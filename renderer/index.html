@@ -1,65 +1,60 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:;">
 <title>YMB 発注くん</title>
+<link rel="stylesheet" href="ymb-base.css">
 <style>
-  :root{
-    --border:#333;
-    --bg:#f4f4f6;
-    --panel:#fff;
-    --accent:#2b5797;
-  }
-  *{box-sizing:border-box;}
+  /* アプリのガワ。色・フォント・角丸・余白は ymb-base.css のトークンを参照する。
+     #sheet 以下は印刷される紙面の再現なので、テーマに追従させず白地・黒罫線で固定する。 */
   html,body{height:100%;overflow:hidden;}
   body{
-    font-family:"Yu Gothic","Meiryo",sans-serif;
-    background:var(--bg);
-    margin:0;
     padding:20px;
-    color:#222;
     display:flex;
     flex-direction:column;
   }
-  h1{font-size:18px;margin:0 0 12px;flex:none;}
-  .layout{display:flex;gap:20px;align-items:flex-start;flex:1;min-height:0;}
+  h1{font-size:var(--ymb-fs-h1);margin:0 0 12px;flex:none;}
+  .layout{display:flex;gap:var(--ymb-space-xl);align-items:flex-start;flex:1;min-height:0;}
   .panel{
-    background:var(--panel);
-    border:1px solid #ccc;
-    border-radius:6px;
+    background:var(--ymb-surface);
+    border:1px solid var(--ymb-border);
+    border-radius:var(--ymb-radius-md);
     padding:14px 16px;
     margin-bottom:16px;
   }
   .controls{width:360px;flex:none;height:100%;overflow-y:auto;}
   .sheet-wrap{flex:1;min-width:0;height:100%;overflow-y:auto;}
-  fieldset{border:1px solid #ccc;border-radius:6px;margin-bottom:14px;padding:10px 12px;}
-  legend{font-weight:bold;font-size:13px;padding:0 6px;color:var(--accent);}
-  label{display:block;font-size:12px;margin:6px 0 2px;color:#444;}
+  fieldset{border:1px solid var(--ymb-border);border-radius:var(--ymb-radius-md);margin-bottom:14px;padding:10px 12px;}
+  legend{font-weight:bold;font-size:var(--ymb-fs-base);padding:0 6px;color:var(--ymb-accent);}
+  label{display:block;font-size:var(--ymb-fs-label);margin:6px 0 2px;color:var(--ymb-fg-dim);}
   input[type=text],input[type=date],input[type=number],select,textarea{
-    width:100%;padding:5px 6px;font-size:13px;border:1px solid #bbb;border-radius:4px;
+    width:100%;padding:5px 6px;font-size:var(--ymb-fs-base);
+    border:1px solid var(--ymb-border);border-radius:var(--ymb-radius-sm);
   }
   textarea{resize:vertical;min-height:44px;}
   button{
-    cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:#fff;
-    padding:6px 12px;border-radius:4px;font-size:12px;margin-top:8px;
+    cursor:pointer;border:1px solid var(--ymb-accent);
+    background:var(--ymb-accent);color:var(--ymb-accent-fg);
+    padding:6px 12px;border-radius:var(--ymb-radius-sm);font-size:var(--ymb-fs-label);margin-top:8px;
   }
-  button.secondary{background:#fff;color:var(--accent);}
-  button.small{padding:3px 8px;font-size:11px;margin:0;}
-  button.danger{background:#fff;color:#c0392b;border-color:#c0392b;}
-  button.primary-action{background:#c0392b;border-color:#c0392b;width:100%;}
-  .btn-row{display:flex;gap:6px;flex-wrap:wrap;}
-  .hist-list{max-height:260px;overflow-y:auto;border:1px solid #eee;}
+  button.secondary{background:var(--ymb-surface);color:var(--ymb-accent);}
+  button.small{padding:3px 8px;font-size:var(--ymb-fs-small);margin:0;}
+  /* 破壊的操作。アクセントと同じ赤系なので、色ではなく「枠線のみ」で主要操作と区別する。 */
+  button.danger{background:var(--ymb-surface);color:var(--ymb-danger);border-color:var(--ymb-danger);}
+  button.primary-action{width:100%;}
+  .btn-row{display:flex;gap:var(--ymb-space-sm);flex-wrap:wrap;}
+  .hist-list{max-height:260px;overflow-y:auto;border:1px solid var(--ymb-border-soft);}
   .hist-item{
     display:flex;justify-content:space-between;align-items:center;gap:6px;
-    padding:6px 8px;border-bottom:1px solid #eee;font-size:11px;
+    padding:6px 8px;border-bottom:1px solid var(--ymb-border-soft);font-size:var(--ymb-fs-small);
   }
   .hist-item:last-child{border-bottom:none;}
   .hist-item .info{flex:1;min-width:0;}
   .hist-item .info .l1{font-weight:bold;}
-  .hist-item .info .l2{color:#666;}
+  .hist-item .info .l2{color:var(--ymb-fg-muted);}
   .hist-item .amount{white-space:nowrap;font-weight:bold;}
-  .hist-empty{padding:10px;font-size:12px;color:#999;text-align:center;}
+  .hist-empty{padding:10px;font-size:var(--ymb-fs-label);color:var(--ymb-fg-muted);text-align:center;}
 
   /* 発注書シート */
   #sheet{
@@ -120,7 +115,7 @@
 </head>
 <body>
 
-<h1>YMB 発注くん <span id="appVersion" style="font-size:12px;color:#888;font-weight:normal;"></span></h1>
+<h1>YMB 発注くん <span id="appVersion" style="font-size:var(--ymb-fs-label);color:var(--ymb-fg-muted);font-weight:normal;"></span></h1>
 
 <div id="updateBanner" class="no-print" style="display:none;background:#fff3cd;border:1px solid #ffe08a;color:#7a5c00;padding:8px 14px;border-radius:6px;margin-bottom:12px;font-size:13px;justify-content:space-between;align-items:center;">
   <span id="updateBannerText"></span>
