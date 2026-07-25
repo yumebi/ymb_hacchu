@@ -4,3 +4,6 @@ build/icon.png
 *.log
 .DS_Store
 .claude/
+
+# CodeGraph のインデックス(ソースから再生成される)
+.codegraph/
