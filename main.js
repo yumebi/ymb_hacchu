@@ -129,8 +129,25 @@ ipcMain.handle('update:check', async () => {
   }
 });
 
+// 更新ページのURL検証: 自リポジトリのURLだけを開く。
+// 単純な startsWith では「https://github.com/yumebi/ymb_hacchu.evil.com」のような
+// 偽装ホストも通ってしまうため、URLをパースしてホスト名とパスを厳密に検証する。
+function isAllowedUpdateUrl(url) {
+  if (typeof url !== 'string') return false;
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== 'https:') return false;
+  if (parsed.hostname !== 'github.com') return false;
+  return parsed.pathname === '/yumebi/ymb_hacchu' ||
+    parsed.pathname.startsWith('/yumebi/ymb_hacchu/');
+}
+
 ipcMain.handle('update:openUrl', (event, url) => {
-  if (typeof url === 'string' && url.startsWith('https://github.com/yumebi/ymb_hacchu')) {
+  if (isAllowedUpdateUrl(url)) {
     shell.openExternal(url);
   }
 });
