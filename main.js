@@ -24,11 +24,12 @@ function loadData() {
     return {
       senders: data.senders || [],
       clients: data.clients || [],
+      templates: data.templates || [],
       orders: data.orders || [],
       lastNo: data.lastNo || 1
     };
   } catch (e) {
-    return { senders: [], clients: [], orders: [], lastNo: 1 };
+    return { senders: [], clients: [], templates: [], orders: [], lastNo: 1 };
   }
 }
 
@@ -80,6 +81,13 @@ ipcMain.handle('data:setClients', (event, clients) => {
   data.clients = clients;
   saveData(data);
   return data.clients;
+});
+
+ipcMain.handle('data:setTemplates', (event, templates) => {
+  const data = loadData();
+  data.templates = templates;
+  saveData(data);
+  return data.templates;
 });
 
 ipcMain.handle('data:saveOrder', (event, order) => {

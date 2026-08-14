@@ -1,6 +1,7 @@
 let senders = [];
 let clients = [];
 let orders = [];
+let templates = [];
 let lastNo = 1;
 let items = [];
 let currentOrderId = crypto.randomUUID();
@@ -126,6 +127,104 @@ document.getElementById('clientDelBtn').addEventListener('click', async ()=>{
 [clientZip, clientAddr, clientName].forEach(el=> el.addEventListener('input', updateSheet));
 clientSuffix.addEventListener('change', updateSheet);
 
+// ---- テンプレート(宛先+明細+備考を再利用) ----
+const templateSelect = document.getElementById('templateSelect');
+const templateName = document.getElementById('templateName');
+
+function refreshTemplateSelect(selectedIdx){
+  templateSelect.innerHTML = '<option value="">-- 選択 --</option>' +
+    templates.map((t,i)=>`<option value="${i}">${escapeHtml(t.name)}</option>`).join('');
+  if(selectedIdx!==undefined) templateSelect.value = selectedIdx;
+}
+
+document.getElementById('templateSaveBtn').addEventListener('click', async ()=>{
+  let name = templateName.value.trim();
+  if(!name) name = clientName.value.trim();
+  if(!name){ alert('テンプレート名を入力してください'); return; }
+  const existingIdx = templateSelect.value ? +templateSelect.value : -1;
+  const tpl = {
+    id: existingIdx>=0 ? templates[existingIdx].id : crypto.randomUUID(),
+    name,
+    clientZip: clientZip.value,
+    clientAddr: clientAddr.value,
+    clientName: clientName.value,
+    clientSuffix: clientSuffix.value,
+    items: items.map(it=>Object.assign({}, it)),
+    remarks: remarksInput.value
+  };
+  if(existingIdx>=0) templates[existingIdx] = tpl;
+  else templates.push(tpl);
+  templates = await window.api.setTemplates(templates);
+  refreshTemplateSelect(existingIdx>=0 ? existingIdx : templates.length-1);
+  templateName.value = '';
+  alert('テンプレートを保存しました');
+});
+
+document.getElementById('templateLoadBtn').addEventListener('click', ()=>{
+  const i = templateSelect.value;
+  if(i===''){ alert('読み込むテンプレートを選択してください'); return; }
+  const t = templates[i];
+  clientSelect.value = '';
+  clientZip.value = t.clientZip||'';
+  clientAddr.value = t.clientAddr||'';
+  clientName.value = t.clientName||'';
+  clientSuffix.value = t.clientSuffix||'御中';
+  remarksInput.value = t.remarks||'';
+  items = (t.items||[]).map(it=>Object.assign({}, it));
+  if(items.length===0) items.push({name:'',qty:'',unit:'',price:'',amount:''});
+  renderItems();
+  updateSheet();
+});
+
+document.getElementById('templateDelBtn').addEventListener('click', async ()=>{
+  const i = templateSelect.value;
+  if(i===''){ return; }
+  if(!confirm(`テンプレート「${templates[i].name}」を削除しますか?`)) return;
+  templates.splice(i,1);
+  templates = await window.api.setTemplates(templates);
+  refreshTemplateSelect();
+});
+
+// ---- 月別集計 ----
+const summaryYear = document.getElementById('summaryYear');
+const summaryBody = document.getElementById('summaryBody');
+const summaryFoot = document.getElementById('summaryFoot');
+let summaryCurrentYear = String(new Date().getFullYear());
+
+function renderSummary(){
+  const years = [...new Set(orders.map(o=>(o.date||'').slice(0,4)).filter(Boolean))];
+  if(years.length===0) years.push(summaryCurrentYear);
+  years.push(summaryCurrentYear);
+  const opts = [...new Set(years)].sort().reverse();
+  summaryYear.innerHTML = opts.map(y=>`<option value="${y}">${y}年</option>`).join('');
+  summaryYear.value = summaryCurrentYear;
+  drawSummary();
+}
+
+function drawSummary(){
+  const year = summaryYear.value;
+  summaryCurrentYear = year;
+  const months = Array.from({length:12},(_,i)=> i+1).map(m=>{
+    const prefix = year + '-' + String(m).padStart(2,'0');
+    const list = orders.filter(o=>(o.date||'').startsWith(prefix));
+    return {
+      m,
+      count: list.length,
+      total: list.reduce((s,o)=> s+(parseFloat(o.total)||0), 0)
+    };
+  });
+  const hasData = months.some(x=>x.count>0);
+  summaryBody.innerHTML = hasData
+    ? months.filter(x=>x.count>0).map(x=>
+        `<tr><td class="m">${x.m}月</td><td>${x.count}件</td><td>¥${yen(x.total)}</td></tr>`
+      ).join('')
+    : '<tr><td colspan="3" class="hist-empty">この年の発注はありません</td></tr>';
+  const yCount = months.reduce((s,x)=>s+x.count,0);
+  const yTotal = months.reduce((s,x)=>s+x.total,0);
+  summaryFoot.innerHTML = `<tr><td>合計</td><td>${yCount}件</td><td>¥${yen(yTotal)}</td></tr>`;
+}
+summaryYear.addEventListener('change', drawSummary);
+
 // ---- 明細行 ----
 function addItem(data){
   items.push(Object.assign({name:'',qty:'',unit:'',price:'',amount:''}, data||{}));
@@ -238,6 +337,7 @@ function renderHistoryList(){
       if(!confirm('この履歴を削除しますか?')) return;
       orders = await window.api.deleteOrder(btn.dataset.id);
       renderHistoryList();
+      renderSummary();
     });
   });
 }
@@ -304,6 +404,7 @@ async function saveCurrentOrder(){
   orders = res.orders;
   lastNo = res.lastNo;
   renderHistoryList();
+  renderSummary();
   return order;
 }
 
@@ -327,6 +428,7 @@ document.getElementById('printBtn').addEventListener('click', async ()=>{
   senders = data.senders;
   clients = data.clients;
   orders = data.orders;
+  templates = data.templates || [];
   lastNo = data.lastNo;
 
   refreshSenderSelect();
@@ -342,6 +444,8 @@ document.getElementById('printBtn').addEventListener('click', async ()=>{
 
   addItem();
   renderHistoryList();
+  renderSummary();
+  refreshTemplateSelect();
   updateSheet();
 
   const version = await window.api.getVersion();

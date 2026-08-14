@@ -44,6 +44,15 @@
   button.danger{background:var(--ymb-surface);color:var(--ymb-danger);border-color:var(--ymb-danger);}
   button.primary-action{width:100%;}
   .btn-row{display:flex;gap:var(--ymb-space-sm);flex-wrap:wrap;}
+  .summary-controls{display:flex;align-items:flex-end;gap:8px;}
+  .summary-controls label{margin:0;}
+  .summary-controls select{width:auto;flex:1;}
+  .summary-controls button{margin:0;}
+  .summary-table{width:100%;border-collapse:collapse;font-size:var(--ymb-fs-small);margin-top:6px;}
+  .summary-table th,.summary-table td{border:1px solid var(--ymb-border-soft);padding:3px 6px;text-align:right;}
+  .summary-table th{font-weight:bold;color:var(--ymb-fg-muted);}
+  .summary-table td.m{text-align:center;}
+  .summary-table tfoot td{font-weight:bold;border-top:2px solid var(--ymb-border);}
   .hist-list{max-height:260px;overflow-y:auto;border:1px solid var(--ymb-border-soft);}
   .hist-item{
     display:flex;justify-content:space-between;align-items:center;gap:6px;
@@ -176,6 +185,37 @@
 
     <div class="panel">
       <button type="button" id="addRowBtn" style="width:100%;">明細行を追加</button>
+    </div>
+
+    <div class="panel">
+      <fieldset>
+        <legend>テンプレート</legend>
+        <label>登録済みから選択</label>
+        <select id="templateSelect"></select>
+        <div class="btn-row">
+          <button type="button" class="small secondary" id="templateLoadBtn">読み込み</button>
+          <button type="button" class="small danger" id="templateDelBtn">削除</button>
+        </div>
+        <label>新しいテンプレート名</label>
+        <input type="text" id="templateName" placeholder="例: 毎月分・サンプル商事">
+        <button type="button" class="small secondary" id="templateSaveBtn" style="width:100%;">現在の内容をテンプレート保存</button>
+      </fieldset>
+    </div>
+
+    <div class="panel">
+      <fieldset>
+        <legend>月別集計</legend>
+        <div class="summary-controls">
+          <select id="summaryYear" style="width:auto;"></select>
+        </div>
+        <table class="summary-table">
+          <thead>
+            <tr><th>月</th><th>件数</th><th>合計金額</th></tr>
+          </thead>
+          <tbody id="summaryBody"></tbody>
+          <tfoot id="summaryFoot"></tfoot>
+        </table>
+      </fieldset>
     </div>
 
     <div class="panel">
