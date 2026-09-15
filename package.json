@@ -13,7 +13,7 @@
     "dist": "electron-builder --win --publish=never"
   },
   "devDependencies": {
-    "electron": "^43.4.0",
+    "electron": "^44.1.1",
     "electron-builder": "^26.15.3",
     "png-to-ico": "^3.0.2",
     "sharp": "^0.35.3"
@@ -28,7 +28,10 @@
     ],
     "icon": "build/icon.ico",
     "win": {
-      "target": ["nsis", "portable"]
+      "target": [
+        "nsis",
+        "portable"
+      ]
     },
     "nsis": {
       "language": "1041",
