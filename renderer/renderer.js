@@ -238,10 +238,10 @@ function renderItems(){
     tr.innerHTML = `
       <td style="text-align:center;" class="no-print"><button type="button" class="row-del" data-i="${i}">✕</button></td>
       <td class="name"><textarea rows="1" data-field="name" data-i="${i}">${escapeHtml(it.name)}</textarea></td>
-      <td class="num"><input type="number" data-field="qty" data-i="${i}" value="${it.qty}"></td>
+      <td class="num"><input type="number" data-field="qty" data-i="${i}" value="${escapeHtml(it.qty)}"></td>
       <td class="num"><input type="text" data-field="unit" data-i="${i}" value="${escapeHtml(it.unit)}" style="text-align:center;"></td>
-      <td class="num"><input type="number" data-field="price" data-i="${i}" value="${it.price}"></td>
-      <td class="num"><input type="number" data-field="amount" data-i="${i}" value="${it.amount}"></td>
+      <td class="num"><input type="number" data-field="price" data-i="${i}" value="${escapeHtml(it.price)}"></td>
+      <td class="num"><input type="number" data-field="amount" data-i="${i}" value="${escapeHtml(it.amount)}"></td>
     `;
     body.appendChild(tr);
   });
@@ -323,8 +323,8 @@ function renderHistoryList(){
       </div>
       <div class="amount">¥${yen(o.total)}</div>
       <div class="btn-row">
-        <button type="button" class="small secondary" data-act="open" data-id="${o.id}">開く</button>
-        <button type="button" class="small danger" data-act="del" data-id="${o.id}">削除</button>
+        <button type="button" class="small secondary" data-act="open" data-id="${escapeHtml(o.id)}">開く</button>
+        <button type="button" class="small danger" data-act="del" data-id="${escapeHtml(o.id)}">削除</button>
       </div>
     `;
     box.appendChild(div);
