@@ -10,7 +10,8 @@
   "scripts": {
     "start": "electron .",
     "icon": "node scripts/generate-icon.js",
-    "dist": "electron-builder --win --publish=never"
+    "dist": "electron-builder --win --publish=never",
+    "test": "node --test \"test/*.test.js\""
   },
   "devDependencies": {
     "electron": "^44.1.1",
@@ -24,6 +25,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "lib/**/*",
       "renderer/**/*"
     ],
     "icon": "build/icon.ico",

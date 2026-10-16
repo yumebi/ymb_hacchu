@@ -1,6 +1,8 @@
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { createDataStore } = require('./lib/dataStore');
+const { createWindowStateKeeper } = require('./lib/windowState');
 
 app.setName('YMB 発注くん');
 
@@ -17,24 +19,47 @@ function compareVersions(a, b) {
 
 const DATA_FILE = path.join(app.getPath('userData'), 'data.json');
 
+// 保存は原子的(一時ファイル + rename)。直前の正常なファイルは .bak に、その日の最初の保存の前の
+// 状態は backups/ に残す。壊れたファイルを読んだときは、空データで上書きせず、退避して復元する。
+// (以前は、読み込みに失敗すると空データを返し、次の保存で全件を失う恐れがあった)
+const dataStore = createDataStore(DATA_FILE);
+
+// 壊れたデータを復元したときは、黙って進めず利用者に知らせる(同じ内容を何度も出さない)。
+const shownRecoveryKinds = new Set();
+function notifyRecovery(recovery) {
+  if (!recovery || shownRecoveryKinds.has(recovery.kind)) return;
+  shownRecoveryKinds.add(recovery.kind);
+
+  const messages = {
+    restoredBackup: {
+      message: 'データファイルが壊れていたため、バックアップから復元しました。',
+      detail: `壊れたファイルは、次の場所に退避してあります。\n${recovery.corruptPath}\n\n復元に使ったバックアップ:\n${recovery.from}\n\n直前の保存より少し前の状態に戻っている可能性があります。`,
+    },
+    empty: {
+      message: 'データファイルが壊れていて、使えるバックアップも見つかりませんでした。空の状態で起動します。',
+      detail: `壊れたファイルは、次の場所に退避してあります(削除しないでください)。\n${recovery.corruptPath}\n\nこのファイルがあれば、内容を取り出せる可能性があります。`,
+    },
+    restoredMissing: {
+      message: 'データファイルが見つからなかったため、バックアップから復元しました。',
+      detail: `復元に使ったバックアップ:\n${recovery.from}`,
+    },
+  };
+  const m = messages[recovery.kind];
+  if (!m) return;
+
+  const options = { type: 'warning', title: 'YMB 発注くん', message: m.message, detail: m.detail, buttons: ['OK'] };
+  const args = mainWindow && !mainWindow.isDestroyed() ? [mainWindow, options] : [options];
+  dialog.showMessageBox(...args).catch(() => {});
+}
+
 function loadData() {
-  try {
-    const raw = fs.readFileSync(DATA_FILE, 'utf-8');
-    const data = JSON.parse(raw);
-    return {
-      senders: data.senders || [],
-      clients: data.clients || [],
-      templates: data.templates || [],
-      orders: data.orders || [],
-      lastNo: data.lastNo || 1
-    };
-  } catch (e) {
-    return { senders: [], clients: [], templates: [], orders: [], lastNo: 1 };
-  }
+  const { data, recovery } = dataStore.load();
+  notifyRecovery(recovery);
+  return data;
 }
 
 function saveData(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+  dataStore.save(data);
 }
 
 // 送信元が自アプリのメインウィンドウ(メインフレーム)かどうかを検証する。
@@ -110,10 +135,32 @@ function sanitizeList(arr, fn) {
 
 let mainWindow;
 
+const MIN_WIDTH = 900;
+const MIN_HEIGHT = 600;
+
+// 位置・大きさ・最大化の状態を保存して、次回の起動で復元する。
+// モニタ構成が変わっていて画面外になる場合は、画面内に補正される。
+const windowState = createWindowStateKeeper({
+  file: path.join(app.getPath('userData'), 'window-state.json'),
+  defaultWidth: 1200,
+  defaultHeight: 900,
+  minWidth: MIN_WIDTH,
+  minHeight: MIN_HEIGHT,
+  screen,
+});
+
 function createWindow() {
+  const state = windowState.load();
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 900,
+    x: state.x,
+    y: state.y,
+    width: state.width,
+    height: state.height,
+    minWidth: MIN_WIDTH,
+    minHeight: MIN_HEIGHT,
+    // 描画が整うまで表示しない(表示した瞬間に、白い空のウインドウが見えるのを防ぐ)。
+    show: false,
+    backgroundColor: '#f5f6f8',
     title: 'YMB 発注くん',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -130,14 +177,34 @@ function createWindow() {
     if (!url.startsWith('file://')) e.preventDefault();
   });
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+
+  windowState.manage(mainWindow);
+  mainWindow.once('ready-to-show', () => {
+    // 最大化で終了していた場合は、表示する前に最大化する(通常サイズが一瞬見えるのを防ぐ)。
+    if (state.isMaximized) mainWindow.maximize();
+    mainWindow.show();
+  });
 }
 
-app.whenReady().then(() => {
-  createWindow();
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+// 二重起動を防ぐ。2つ開くと、それぞれが data.json を丸ごと保存するため、後から保存した方の内容で
+// 先の変更が失われる。2つ目を起動したら、すでに開いているウインドウを前面に出す。
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
   });
-});
+
+  app.whenReady().then(() => {
+    createWindow();
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
