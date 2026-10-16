@@ -3,19 +3,12 @@ const path = require('path');
 const fs = require('fs');
 const { createDataStore } = require('./lib/dataStore');
 const { createWindowStateKeeper } = require('./lib/windowState');
+const { fetchLatestRelease, isNewer } = require('./lib/updateCheck');
 
 app.setName('YMB 発注くん');
 
-const VERSION_JSON_URL = 'https://raw.githubusercontent.com/yumebi/ymb_hacchu/master/version.json';
-
-function compareVersions(a, b) {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) - (pb[i] || 0);
-  }
-  return 0;
-}
+const UPDATE_REPO = 'yumebi/ymb_hacchu';
+const RELEASES_URL = `https://github.com/${UPDATE_REPO}/releases/latest`;
 
 const DATA_FILE = path.join(app.getPath('userData'), 'data.json');
 
@@ -278,19 +271,13 @@ ipcMain.handle('app:getVersion', (event) => {
 
 ipcMain.handle('update:check', async (event) => {
   if (!isTrustedSender(event)) return { hasUpdate: false };
-  try {
-    const res = await fetch(VERSION_JSON_URL, { cache: 'no-store' });
-    if (!res.ok) return { hasUpdate: false };
-    const remote = await res.json();
-    const current = app.getVersion();
-    const v = typeof remote.version === 'string' ? /^\d+\.\d+\.\d+$/.exec(remote.version)?.[0] : null;
-    if (v && compareVersions(v, current) > 0) {
-      return { hasUpdate: true, latest: v, url: typeof remote.url === 'string' ? remote.url : '' };
-    }
-    return { hasUpdate: false };
-  } catch (e) {
-    return { hasUpdate: false };
+  // 公開済みのリリースを見る(version.json だと、リリースに失敗しても先に更新されて、存在しない版を案内してしまう)。
+  // 取れない・版番号として読めない場合は「更新なし」。
+  const release = await fetchLatestRelease(UPDATE_REPO);
+  if (release && isNewer(release.version, app.getVersion())) {
+    return { hasUpdate: true, latest: release.version, url: release.url || RELEASES_URL };
   }
+  return { hasUpdate: false };
 });
 
 // 更新ページのURL検証: 自リポジトリのURLだけを開く。
