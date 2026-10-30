@@ -37,16 +37,24 @@ npm start
 
 ## 技術スタック
 
-- **フレームワーク**: Electron(Node.js + Chromium)
+- **フレームワーク**: Electron 44(Chromium 152 / Node.js 24)
 - **フロントエンド**: `renderer/`配下の静的HTML/CSS/バニラJS(フレームワーク不使用)。
   IPCは`contextBridge`経由の`window.api`ホストオブジェクト呼び出し。
 - **PDF出力**: `webContents.printToPDF`によるメインプロセス側での直接PDF生成。
 - **データ永続化**: JSON(`data.json`)、`%APPDATA%\YMB 発注くん\`配下に保存(DB不使用)。
-- **インストーラー**: electron-builder(NSIS、日本語UI)。ポータブル版(インストール不要の単体exe)も同梱。
+- **インストーラー**: electron-builder 26(NSIS、日本語UI)。ポータブル版(インストール不要の単体exe)も同梱。
 - **CI/CD**: GitHub Actions(`.github/workflows/release.yml`)、masterへのpushで
   バージョン自動採番→ビルド→GitHub Release公開まで自動化。
 
 データ保存先: `%APPDATA%\YMB 発注くん\data.json`
+
+## セキュリティと依存関係の更新
+
+- **脆弱性の検査**: 依存ライブラリの既知の脆弱性を、[OSV-Scanner](https://google.github.io/osv-scanner/) で、push・プルリクエスト・毎週月曜(10:00 JST)に自動で検査します(`.github/workflows/osv-scanner.yml`)。見つかるとこのワークフローが失敗します(リリースのワークフローとは独立で、リリースは止めません)。
+- **更新の提案**: [Dependabot](https://docs.github.com/ja/code-security/dependabot) が、毎週月曜に依存の更新をプルリクエストで提案します(`.github/dependabot.yml`)。公開から 14 日未満のバージョンは対象にしません(供給網攻撃への備え)。
+- **npm の追加の備え**: `.npmrc` の `min-release-age=14` で、npm も公開から 14 日未満のバージョンを解決しません。
+- **緊急の修正**: 実際に影響のある脆弱性の修正など、緊急性が高いものは、14 日未満でもすぐに取り込みます。
+- **失敗が残る場合**: 修正版がない、または上流(開発用の依存を含む Electron や electron-builder)の更新待ちの検出は、検査が失敗のまま残ることがあります。
 
 ## ダウンロード
 
